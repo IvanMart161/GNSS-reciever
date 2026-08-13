@@ -6,11 +6,10 @@
 *.hot
 *.png
 *.svg
-*.txt
 *.csv
 *.hex
 *.asv
-
+*.json
 # ==========================================
 # Артефакты сборки Verilator / C++ / CMake
 # ==========================================
@@ -36,3 +35,5 @@ Vtracker_channel
 .DS_Store
 .vscode/
 .idea/
+.gitignore
+
