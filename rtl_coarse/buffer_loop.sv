@@ -43,7 +43,6 @@ typedef enum logic [1:0] {
 } state_t;
 
 state_t state;
-// ИСПРАВЛЕНО: $clog -> $clog2
 logic [$clog2(FFT_SIZE)-1:0] write_addr;
 
 always_ff @(posedge clk) begin
@@ -63,12 +62,10 @@ always_ff @(posedge clk) begin
 
             COLLECT: begin
                 if (data_valid) begin
-                    // ИСПРАВЛЕНО: заглавные буквы, как при объявлении
                     ram_I[write_addr] <= I_in;
                     ram_Q[write_addr] <= Q_in;
                     
                     if (write_addr == 12'(TARGET_SAMPLES - 1)) begin
-                        // Собрали 3800 точек, переходим к добивке нулями
                         write_addr <= write_addr + 1'b1;
                         state      <= ZERO_PAD;
                     end else begin
@@ -89,9 +86,7 @@ always_ff @(posedge clk) begin
             end
 
             DONE: begin
-                frame_ready <= 1'b1; // Сигнализируем, что можно забирать спектр
-                
-                // Если пришла новая команда — начинаем заново
+                frame_ready <= 1'b1;                 
                 if (start_capture) begin
                     state       <= COLLECT;
                     write_addr  <= '0;

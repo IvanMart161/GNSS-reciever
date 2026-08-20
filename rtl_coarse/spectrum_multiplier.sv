@@ -43,8 +43,8 @@ module spectrum_multiplier #(
     logic signed [GOLD_WIDTH-1:0] rom_im [0:4095];
 
     initial begin
-        $readmemh("gold_spec_re.hex", rom_re);
-        $readmemh("gold_spec_im.hex", rom_im);
+        $readmemh("bin/gold_spec_re.hex", rom_re);
+        $readmemh("bin/gold_spec_im.hex", rom_im);
     end
 
     // =========================================================================

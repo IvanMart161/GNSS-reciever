@@ -1,7 +1,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
-#include "dll_loop.hpp" // [NEW] Подключаем математику DLL
+#include "dll_loop.hpp"
 #include "gnss_ekf.hpp"
 #include <algorithm>
 #include <cmath>
@@ -10,16 +10,12 @@
 
 static constexpr float PI = 3.14159265358979323846f;
 
-// [NEW] Структура ответа контроллера, содержит обе поправки
 struct TrackingResponse {
   int32_t carrier_nco_adjust;
   int32_t code_nco_adjust;
-  float fine_tune_code_hz; // Для вывода графиков в Python
+  float fine_tune_code_hz;
 };
 
-// ==============================================================================
-// 1. Модуль Frequency Pulling (Грубые 20 мс)
-// ==============================================================================
 class FrequencyPuller {
 private:
   float T;
@@ -75,9 +71,6 @@ public:
   }
 };
 
-// ==============================================================================
-// 2. FLL-ASSISTED-PLL. FLL 2nd order & PLL 3rd order
-// ==============================================================================
 class FLL_assisted_PLL {
 private:
   static constexpr float PI = 3.14159265358979323846f;
@@ -104,6 +97,8 @@ public:
     I_accel = 0.0f;
     is_first_sample = true;
   }
+
+  float get_accel_rad() const { return I_accel; }
 
   float update(float I_p, float Q_p, bool pll_enabled = true) {
     if (is_first_sample) {
@@ -141,9 +136,7 @@ public:
     return total_corr_rad / (2.0f * PI);
   }
 };
-// ==============================================================================
-// 3. FSM КОНТРОЛЛЕР КАНАЛА (Adaptive State Machine)
-// ==============================================================================
+
 enum ChannelState {
   STATE_PULLING = 0,
   STATE_FLL_ONLY = 1,
@@ -166,7 +159,6 @@ private:
   uint32_t fll_only_samples;
   uint32_t pll_samples;
 
-  // [NEW] Индикаторы захвата (Lock Detectors)
   float prev_freq_hz;
   uint32_t fll_lock_count;
   float smoothed_pli;
@@ -181,9 +173,7 @@ public:
       : puller(T, 20), tracking_loop(bw_fll, bw_pll, T), ekf(0.020f, 40.0f),
         dll(2.0f, 0.707f, T), state(STATE_PULLING), current_fine_tune_hz(0.0f),
         current_code_tune_hz(0.0f), fll_only_samples(0), pll_samples(0),
-        prev_freq_hz(0.0f), // [NEW] Инициализация переменных детекторов
-        fll_lock_count(0),  // [NEW]
-        smoothed_pli(0.0f), // [NEW]
+        prev_freq_hz(0.0f), fll_lock_count(0), smoothed_pli(0.0f),
         base_doppler_hz(0.0f), sum_I(0.0f), sum_Q(0.0f), ekf_ms_count(0) {
     hz_to_nco_scale = 4294967296.0 / static_cast<double>(f_sys_hz);
   }
@@ -192,7 +182,6 @@ public:
                                   int32_t raw_i_p, int32_t raw_q_p,
                                   int32_t raw_i_l, int32_t raw_q_l) {
 
-    // Приведение всех корреляторов к float с инверсией Q-канала
     float I_e = static_cast<float>(raw_i_e);
     float Q_e = -static_cast<float>(raw_q_e);
     float I_p = static_cast<float>(raw_i_p);
@@ -200,10 +189,8 @@ public:
     float I_l = static_cast<float>(raw_i_l);
     float Q_l = -static_cast<float>(raw_q_l);
 
-    // --- ВЕТКА НЕСУЩЕЙ (Адаптивный FSM) ---
     switch (state) {
 
-    // 1. Грубая оценка частоты (Блочный фильтр, строго 20 мс)
     case STATE_PULLING: {
       bool pulling_done = false;
       current_fine_tune_hz = puller.process_ms(I_p, Q_p, pulling_done);
@@ -211,7 +198,6 @@ public:
         tracking_loop.init_frequency(current_fine_tune_hz);
         state = STATE_FLL_ONLY;
 
-        // Подготавливаем переменные для следующего шага
         prev_freq_hz = current_fine_tune_hz;
         fll_only_samples = 0;
         fll_lock_count = 0;
@@ -219,57 +205,48 @@ public:
       break;
     }
 
-    // 2. Удержание частоты (Ожидание стабилизации FLI)
     case STATE_FLL_ONLY: {
       float new_freq_hz = tracking_loop.update(I_p, Q_p, false);
 
-      // Вычисляем дельту (скачок) частоты
       float freq_step = std::abs(new_freq_hz - prev_freq_hz);
       prev_freq_hz = new_freq_hz;
       current_fine_tune_hz = new_freq_hz;
 
       fll_only_samples++;
 
-      // Детектор захвата: частота не должна прыгать более чем на 1.5 Гц
-      if (freq_step < 1.5f) {
+      if (freq_step < 4.0f) {
         fll_lock_count++;
       } else {
-        fll_lock_count = 0; // При сильном рывке сбрасываем уверенность
+        fll_lock_count = 0;
       }
 
-      // Умный переход: Ждем минимум 20 мс для разгона, требуем 15 мс идеальной
-      // стабильности
       if (fll_only_samples >= 20 && fll_lock_count >= 15) {
         state = STATE_FLL_ASSISTED_PLL;
 
-        // Подготавливаем переменные для следующего шага
         pll_samples = 0;
         smoothed_pli = 0.0f;
       }
       break;
     }
 
-    // 3. Удержание фазы (Ожидание стягивания энергии в канал I через PLI)
     case STATE_FLL_ASSISTED_PLL: {
       current_fine_tune_hz = tracking_loop.update(I_p, Q_p, true);
 
-      // Мгновенный индикатор захвата фазы (PLI)
       float I_sq = I_p * I_p;
       float Q_sq = Q_p * Q_p;
       float current_pli = (I_sq - Q_sq) / (I_sq + Q_sq + 1e-6f);
 
-      // Сглаживание через Low-Pass Filter
       smoothed_pli = 0.95f * smoothed_pli + 0.05f * current_pli;
 
       pll_samples++;
 
-      // Умный переход: Ждем минимум 50 мс для накопления уверенности.
-      // Включаем EKF только тогда, когда фаза идеально выровнялась (PLI > 0.8)
-      if (pll_samples >= 50 && smoothed_pli > 0.8f) {
-        ekf.init_states(current_fine_tune_hz * 2.0f * PI, 0.0f);
+      if (pll_samples >= 500 && smoothed_pli > 0.6f) {
+        ekf.init_states(current_fine_tune_hz * 2.0f * PI,
+                        tracking_loop.get_accel_rad());
         state = STATE_EKF_TRACKING;
 
-        // Подготавливаем переменные для РФК и сужаем кодовую петлю
+        sum_I = 0.0f;
+        sum_Q = 0.0f;
         sum_I = 0.0f;
         sum_Q = 0.0f;
         ekf_ms_count = 0;
@@ -278,7 +255,6 @@ public:
       break;
     }
 
-    // 4. Глубокое слежение через Расширенный Фильтр Калмана
     case STATE_EKF_TRACKING: {
       sum_I += I_p;
       sum_Q += Q_p;
@@ -295,12 +271,10 @@ public:
     }
     }
 
-    // --- ВЕТКА КОДА (DLL работает параллельно и всегда) ---
     float total_carrier_doppler = base_doppler_hz + current_fine_tune_hz;
     current_code_tune_hz =
         dll.update(I_e, Q_e, I_l, Q_l, total_carrier_doppler);
 
-    // --- ФОРМИРОВАНИЕ ОТВЕТА ---
     TrackingResponse response;
     response.carrier_nco_adjust = static_cast<int32_t>(
         std::round(current_fine_tune_hz * hz_to_nco_scale));

@@ -240,7 +240,7 @@ module top_acqu #(
     );
 
     // Для отладки наружу выводим флаг валидности спектра FFT
-    assign fft_ready = internal_fft_valid;
+//    assign fft_ready = internal_fft_valid;
 
 
     // ==========================================

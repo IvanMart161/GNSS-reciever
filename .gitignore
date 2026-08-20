@@ -9,13 +9,13 @@
 *.csv
 *.hex
 *.asv
-*.json
 # ==========================================
 # Артефакты сборки Verilator / C++ / CMake
 # ==========================================
 build/
 obj_dir/
 CMakeFiles/
+compile_commands.json
 CMakeCache.txt
 Makefile
 cmake_install.cmake
@@ -35,5 +35,4 @@ Vtracker_channel
 .DS_Store
 .vscode/
 .idea/
-.gitignore
 

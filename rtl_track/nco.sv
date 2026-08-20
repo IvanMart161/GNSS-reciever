@@ -1,35 +1,27 @@
 module nco #(
-    parameter PHASE_WIDTH   = 32,                   
-    parameter ROM_AWIDTH    = 8,                    
-    parameter ROM_DWIDTH    = 8                    
+    parameter PHASE_WIDTH   = 32,
+    parameter ROM_AWIDTH    = 8,
+    parameter ROM_DWIDTH    = 8
 ) (
     input logic                         clk,
     input logic                         rst,
     
-    // Входы для настройки частоты
-    input logic [PHASE_WIDTH-1:0]       phase_step,   // Базовый шаг частоты (опорная ПЧ)
-    
-    // ВАЖНО: Ниша для петли Костаса! 
-    // Сюда будет приходить сигнал ошибки с ПИ-фильтра для подстройки фазы
-    input logic signed [PHASE_WIDTH-1:0] phase_adjust, 
+    input logic [PHASE_WIDTH-1:0]       phase_step,
+    input logic signed [PHASE_WIDTH-1:0] phase_adjust,
 
-    // Потоковые выходы (1 отсчет за такт)
     output logic signed [ROM_DWIDTH-1:0] cos_out,
     output logic signed [ROM_DWIDTH-1:0] sin_out
 );
     logic [PHASE_WIDTH-1:0] phase_acc;
 
-    // Обновление аккумулятора фазы каждый такт
     always_ff @(posedge clk) begin
         if(rst) begin
             phase_acc <= '0;
         end else begin
-            // Складываем базовую частоту и корректировку от петли Костаса
             phase_acc <= phase_acc + phase_step + $unsigned(phase_adjust);
         end
     end
 
-    // ROM таблица 
     logic signed [ROM_DWIDTH-1:0] sin_rom [0:(2**ROM_AWIDTH)-1];
 
     initial begin
@@ -41,14 +33,13 @@ module nco #(
     logic [ROM_AWIDTH-1:0] addr;
     assign addr = phase_acc[PHASE_WIDTH-1 : PHASE_WIDTH - ROM_AWIDTH]; 
 
-    // Выдача одного отсчета каждый такт
     always_ff @(posedge clk) begin
         if(rst) begin 
             cos_out <= '0;
             sin_out <= '0;
         end else begin 
             sin_out <= sin_rom[addr];
-            cos_out <= sin_rom[addr + 8'd64]; // Сдвиг на 90 градусов для косинуса
+            cos_out <= sin_rom[addr + 8'd64]; 
         end 
     end 
 endmodule

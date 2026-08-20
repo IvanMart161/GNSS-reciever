@@ -6,11 +6,9 @@ module doppler_nco #(
     input  logic                            clk,
     input  logic                            rst,
     
-    // Управление
     input  logic [PHASE_WIDTH-1:0]          doppler_step,
     input  logic                            stream_enable,
     
-    // Выход сгенерированного NCO
     output logic signed [ROM_DWIDTH-1:0]    cos_out,
     output logic signed [ROM_DWIDTH-1:0]    sin_out,
     output logic                            valid_out

@@ -6,27 +6,21 @@ module nco_loop #(
     input logic                         clk,
     input logic                         rst,
     
-    // Входы для настройки частоты
-    input logic [PHASE_WIDTH-1:0]       phase_step,   // Базовый шаг частоты (опорная ПЧ)
-    
+    input logic [PHASE_WIDTH-1:0]       phase_step,       
 
-    // Потоковые выходы (1 отсчет за такт)
     output logic signed [ROM_DWIDTH-1:0] cos_out,
     output logic signed [ROM_DWIDTH-1:0] sin_out
 );
     logic [PHASE_WIDTH-1:0] phase_acc;
 
-    // Обновление аккумулятора фазы каждый такт
     always_ff @(posedge clk) begin
         if(rst) begin
             phase_acc <= '0;
         end else begin
-            // Складываем базовую частоту и корректировку от петли Костаса
             phase_acc <= phase_acc + phase_step;
         end
     end
 
-    // ROM таблица 
     logic signed [ROM_DWIDTH-1:0] sin_rom [0:(2**ROM_AWIDTH)-1];
 
     initial begin
@@ -38,7 +32,6 @@ module nco_loop #(
     logic [ROM_AWIDTH-1:0] addr;
     assign addr = phase_acc[PHASE_WIDTH-1 : PHASE_WIDTH - ROM_AWIDTH]; 
 
-    // Выдача одного отсчета каждый такт
     always_ff @(posedge clk) begin
         if(rst) begin 
             cos_out <= '0;

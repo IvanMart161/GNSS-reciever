@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(GNSS_Receiver_Pipeline)
 
-# Находим Verilator в системе
 find_package(Verilator REQUIRED)
 
-# Находим Eigen3
 find_package(Eigen3 REQUIRED)
 
-# Устанавливаем стандарт C++ (важно для современных фич в тестбенчах)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -35,7 +34,7 @@ target_include_directories(coarse_sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/includ
 verilate(coarse_sim
     SOURCES ${COARSE_RTL_SRCS}
     TOP_MODULE top_acqu
-    INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse/FFT 
+    INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse/FFT
                  ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse/IFFT
                  ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse
     VERILATOR_ARGS "--trace"
@@ -44,6 +43,8 @@ verilate(coarse_sim
                    "-Wno-SYNCASYNCNET"
                    "-Wno-PINCONNECTEMPTY"
                    "-Wno-TIMESCALEMOD"
+                   "-Wno-WIDTHTRUNC"
+                   "-Wno-WIDTHEXPAND"
     PREFIX Vtop_acqu
 )
 
@@ -59,23 +60,19 @@ set(TRACKING_RTL_SRCS
     rtl_track/corr_accumulator.sv
 )
 
-# # [NEW] Список заголовочных файлов C++
 set(TRACKING_CPP_HDRS
     include/gnss_tracking.hpp
     include/gnss_ekf.hpp
-    include/dll_loop.hpp # [NEW] Наша новая петля DLL
+    include/dll_loop.hpp
 )
 
-# # [NEW] Явно передаем и .cpp, и .hpp в add_executable
-add_executable(tracking_sim 
+add_executable(tracking_sim
     sim/tb_track.cpp
-    ${TRACKING_CPP_HDRS} # [NEW] Добавили хедеры
+    ${TRACKING_CPP_HDRS}
 )
 
-# Указываем папку include/, чтобы компилятор знал, где искать #include "..."
 target_include_directories(tracking_sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Подключение Eigen[cite: 6]
 target_link_libraries(tracking_sim PRIVATE Eigen3::Eigen)
 
 verilate(tracking_sim

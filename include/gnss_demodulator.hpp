@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <iomanip> // Для красивого вывода в HEX
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -28,11 +28,9 @@ private:
   uint8_t shift_reg;
   bool phase_inverted;
 
-  // [ИСПРАВЛЕНО] Теперь это 32-битное число, чтобы вместить 30 бит слова
   uint32_t current_word;
   uint32_t bit_count;
 
-  // [ИСПРАВЛЕНО] Собираем не текст, а массив 30-битных чисел
   std::vector<uint32_t> decoded_words;
 
 public:
@@ -96,35 +94,30 @@ public:
       current_bit_sum = 0;
       ms_in_bit = 0;
 
-      // ЭТАП 2: Ищем преамбулу TLM слова (0x8B)
       if (state == STATE_WAITING_FRAME) {
         shift_reg = (shift_reg << 1) | raw_bit;
 
-        uint8_t target_preamble = 0x8B; // 10001011 в бинаре
+        uint8_t target_preamble = 0x8B;
         uint8_t target_preamble_inv = ~target_preamble;
 
         if (shift_reg == target_preamble || shift_reg == target_preamble_inv) {
           phase_inverted = (shift_reg == target_preamble_inv);
           state = STATE_DEMODULATING;
 
-          // Мы уже приняли 8 бит преамбулы, поэтому записываем их в наше слово!
           current_word = 0x8B;
-          bit_count = 8; // У нас уже есть 8 бит из 30
+          bit_count = 8;
 
           std::cout << "[DEMODULATOR] Кадровая синхронизация (TLM Preamble "
                        "0x8B) найдена!\n";
           std::cout << "[DEMODULATOR] Фаза несущей: "
                     << (phase_inverted ? "180" : "0") << " градусов.\n";
         }
-      }
-      // ЭТАП 3: Собираем слова по 30 бит
-      else if (state == STATE_DEMODULATING) {
+      } else if (state == STATE_DEMODULATING) {
         uint8_t actual_bit = phase_inverted ? (raw_bit ^ 1) : raw_bit;
 
         current_word = (current_word << 1) | actual_bit;
         bit_count++;
 
-        // Как только собрали 30 бит - сохраняем слово и начинаем новое
         if (bit_count == 30) {
           decoded_words.push_back(current_word);
           bit_count = 0;
@@ -136,10 +129,7 @@ public:
     return false;
   }
 
-  uint32_t get_latest_word() const { 
-    return decoded_words.back();
-  }
-  // Метод для вывода собранных 30-битных слов в шестнадцатеричном виде
+  uint32_t get_latest_word() const { return decoded_words.back(); }
   void print_words() const {
     std::cout << "\n======================================================\n";
     std::cout << "[DEMODULATOR] Принятые навигационные слова (HEX):\n";

@@ -16,7 +16,6 @@ module corr_accumulator #(
     output logic                        valid_out
 );
 
-    // Внутренние "теневые" регистры для накопления
     logic signed [ACC_WIDTH-1:0] sum_i_e, sum_i_p, sum_i_l;
     logic signed [ACC_WIDTH-1:0] sum_q_e, sum_q_p, sum_q_l;
 
@@ -31,10 +30,8 @@ module corr_accumulator #(
             
             valid_out <= 1'b0;
         end else if (dump_strobe) begin
-            // 1. Выдаем сигнал готовности для С++
             valid_out <= 1'b1;
             
-            // 2. ЗАЩЕЛКИВАЕМ огромную готовую сумму на выходные порты
             acc_i_e <= sum_i_e;
             acc_i_p <= sum_i_p;
             acc_i_l <= sum_i_l;
@@ -42,7 +39,6 @@ module corr_accumulator #(
             acc_q_p <= sum_q_p;
             acc_q_l <= sum_q_l;
             
-            // 3. Начинаем копить новую эпоху со свежего текущего отсчета
             sum_i_e <= $signed(i_e);
             sum_i_p <= $signed(i_p);
             sum_i_l <= $signed(i_l);
@@ -52,7 +48,6 @@ module corr_accumulator #(
         end else begin
             valid_out <= 1'b0;
             
-            // Продолжаем накапливать в фоне
             sum_i_e <= sum_i_e + $signed(i_e);
             sum_i_p <= sum_i_p + $signed(i_p);
             sum_i_l <= sum_i_l + $signed(i_l);

@@ -9,7 +9,6 @@
 #include "Vtracker_channel___024root.h"
 #include "verilated.h"
 
-// ПОДКЛЮЧАЕМ ТВОЙ FSM-КОНТРОЛЛЕР И EKF
 #include "gnss_demodulator.hpp"
 #include "gnss_parser.hpp"
 #include "gnss_tracking.hpp"
@@ -17,7 +16,7 @@
 #pragma pack(push, 1)
 struct TrackingRecord {
   uint32_t time_ms;
-  int32_t i_p; // ИСПРАВЛЕНО: Читаем Prompt канал для Python
+  int32_t i_p;
   int32_t q_p;
   int32_t state;
   float fine_tune_hz;
@@ -51,13 +50,10 @@ int main(int argc, char **argv) {
   }
   if (argc > 2) {
     int shift = std::stoi(argv[2]) * 10 - 18;
-    code_shift_adc = (shift > 0) ? shift : 0;
   }
 
-  // =========================================================================
-  // 1. ЗАГРУЗКА БИНАРНЫХ ДАННЫХ
-  // =========================================================================
-  std::ifstream in_file("gps_if_signal.bin", std::ios::binary | std::ios::ate);
+  std::ifstream in_file("bin/gps_if_signal.bin",
+                        std::ios::binary | std::ios::ate);
   if (!in_file.is_open()) {
     std::cerr << "Error: Cannot open gps_if_signal.bin." << std::endl;
     return 1;
@@ -77,8 +73,8 @@ int main(int argc, char **argv) {
   }
   in_file.close();
 
-  std::ofstream bin_file("tracking_results.bin", std::ios::binary);
-  std::ofstream tact_bin("correlation_tact.bin", std::ios::binary);
+  std::ofstream bin_file("bin/tracking_results.bin", std::ios::binary);
+  std::ofstream tact_bin("bin/correlation_tact.bin", std::ios::binary);
   if (!bin_file.is_open() || !tact_bin.is_open()) {
     std::cerr << "Error: Cannot create output binary files" << std::endl;
     return 1;
@@ -87,7 +83,6 @@ int main(int argc, char **argv) {
   const float F_SYS = 38192000.0f;
   const float F_IF = 9548000.0f;
 
-  // --- СБРОС ---
   dut->rst = 1;
   dut->clk = 0;
   dut->eval();
@@ -95,22 +90,18 @@ int main(int argc, char **argv) {
   dut->eval();
   dut->rst = 0;
 
-  // --- ИНИЦИАЛИЗАЦИЯ ЖЕЛЕЗА ---
   double hz_to_nco = 4294967296.0 / F_SYS;
   dut->carrier_phase_step =
       static_cast<uint32_t>(std::round((F_IF + coarse_doppler_hz) * hz_to_nco));
   dut->carrier_phase_adjust = 0;
 
-  // dut->code_phase_step = 115033481;
   dut->code_phase_step = 115043767;
   dut->code_phase_adjust = 0;
 
   dut->s1 = 2;
   dut->s2 = 6;
 
-  // --- ИНИЦИАЛИЗАЦИЯ C++ FSM КОНТРОЛЛЕРА ---
-  // Создаем экземпляр контроллера, который будет управлять подстройкой
-  TrackingChannelController controller(F_SYS, 10.0f, 15.0f, 0.001f);
+  TrackingChannelController controller(F_SYS, 15.0f, 20.0f, 0.001f);
   NavDataDemodulator demodulator;
   NavDataParser parser;
 
@@ -119,9 +110,6 @@ int main(int argc, char **argv) {
 
   std::cout << "=== Starting CLOSED-LOOP Simulation ===" << std::endl;
 
-  // =========================================================================
-  // 2. ГЛАВНЫЙ ЦИКЛ СИМУЛЯЦИИ
-  // =========================================================================
   for (size_t adc_idx = code_shift_adc; adc_idx < adc_data.size(); ++adc_idx) {
 
     dut->adc_data_in = adc_data[adc_idx];
@@ -144,34 +132,28 @@ int main(int argc, char **argv) {
 
     tact++;
 
-    // --- Обработка конца эпохи (1 мс) ---
     if (dut->dump_valid) {
       ms_counter++;
 
-      // 1. Читаем все 6 каналов корреляторов
-      int32_t i_e = sign_ext24(dut->acc_i_e); // [NEW]
-      int32_t q_e = sign_ext24(dut->acc_q_e); // [NEW]
+      int32_t i_e = sign_ext24(dut->acc_i_e);
+      int32_t q_e = sign_ext24(dut->acc_q_e);
       int32_t i_p = sign_ext24(dut->acc_i_p);
       int32_t q_p = sign_ext24(dut->acc_q_p);
-      int32_t i_l = sign_ext24(dut->acc_i_l); // [NEW]
-      int32_t q_l = sign_ext24(dut->acc_q_l); // [NEW]
+      int32_t i_l = sign_ext24(dut->acc_i_l);
+      int32_t q_l = sign_ext24(dut->acc_q_l);
 
-      // 2. ЗАМЫКАЕМ ПЕТЛЮ: Скармливаем данные контроллеру
       TrackingResponse response =
           controller.process_sample(i_e, q_e, i_p, q_p, i_l, q_l); // [NEW]
 
       bool is_locked = (controller.get_state() == STATE_EKF_TRACKING);
       if (demodulator.process_ms(i_p, is_locked)) {
-          uint32_t new_word = demodulator.get_latest_word();
-          parser.process_word(new_word);
+        uint32_t new_word = demodulator.get_latest_word();
+        parser.process_word(new_word);
       }
 
-      // 3. Отправляем рассчитанную поправку частоты в ПЛИС (кодовая подстройка
-      // и подстройка гетеродина)
       dut->carrier_phase_adjust = response.carrier_nco_adjust;
       dut->code_phase_adjust = response.code_nco_adjust;
 
-      // 4. Логируем результаты для Python
       TrackingRecord rec;
       rec.time_ms = ms_counter;
       rec.i_p = i_p;
@@ -185,7 +167,6 @@ int main(int argc, char **argv) {
       bin_file.write(reinterpret_cast<const char *>(&rec),
                      sizeof(TrackingRecord));
 
-      // Вывод в консоль раз в 100 мс, чтобы видеть прогресс автомата
       if (ms_counter % 100 == 0) {
         std::cout << "ms: " << ms_counter << " | State: " << rec.state
                   << " | I_P: " << i_p << "\t Q_P: " << q_p

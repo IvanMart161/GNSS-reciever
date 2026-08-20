@@ -10,29 +10,22 @@ module tracker_channel #(
     input  logic                               clk,
     input  logic                               rst,
     
-    // Вход от АЦП (1-битный)
     input  logic                               adc_data_in,
     
-    // Управление петлями слежения (от C++ / процессора)
     input  logic [CARRIER_PHASE_WIDTH-1:0]     carrier_phase_step,
     input  logic signed [CARRIER_PHASE_WIDTH-1:0] carrier_phase_adjust, // От PLL
     
     input  logic [CODE_PHASE_WIDTH-1:0]        code_phase_step,
     input  logic signed [CODE_PHASE_WIDTH-1:0] code_phase_adjust,    // От DLL
     
-    // Настройки спутника
     input  logic [3:0]                         s1,
     input  logic [3:0]                         s2,
     
-    // Выходы: Накопленные значения за 1 мс
     output logic signed [ACC_WIDTH-1:0]        acc_i_e, acc_i_p, acc_i_l,
     output logic signed [ACC_WIDTH-1:0]        acc_q_e, acc_q_p, acc_q_l,
     output logic                               dump_valid
 );
 
-    // ==========================================
-    // Внутренние провода
-    // ==========================================
     logic signed [DATA_WIDTH-1:0] nco_cos, nco_sin;
     logic signed [DATA_WIDTH-1:0] baseband_i, baseband_q;
     
@@ -105,8 +98,6 @@ module tracker_channel #(
             mix_i_e <= '0; mix_i_p <= '0; mix_i_l <= '0;
             mix_q_e <= '0; mix_q_p <= '0; mix_q_l <= '0;
         end else begin
-            // Умножаем на код (1 = инверсия, 0 = без изменений)
-            // ПРИМЕЧАНИЕ: Здесь мы согласовали полярность с mixer.sv
             mix_i_e <= e_code ? -baseband_i : baseband_i;
             mix_i_p <= p_code ? -baseband_i : baseband_i;
             mix_i_l <= l_code ? -baseband_i : baseband_i;
@@ -120,7 +111,6 @@ module tracker_channel #(
     // ==========================================
     // 4. НАКОПИТЕЛЬ (Integrate & Dump)
     // ==========================================
-    // Используем code_ena и счетчик для генерации dump_strobe раз в 1023 чипа (1 мс)
     logic [9:0] chip_counter;
     logic       dump_strobe;
 
@@ -133,7 +123,7 @@ module tracker_channel #(
             if (code_ena) begin
                 if (chip_counter == 1022) begin
                     chip_counter <= '0;
-                    dump_strobe  <= 1'b1; // Эпоха закончилась!
+                    dump_strobe  <= 1'b1; 
                 end else begin
                     chip_counter <= chip_counter + 1'b1;
                 end

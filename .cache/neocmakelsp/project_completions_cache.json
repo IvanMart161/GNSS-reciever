@@ -1,0 +1,61 @@
+{
+  "date": "2026-08-19T15:24:18.685945+03:00",
+  "data": {
+    "/Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt": [
+      {
+        "label": "Verilator_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Verilator"
+      },
+      {
+        "label": "Verilator_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Verilator"
+      },
+      {
+        "label": "Eigen3_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Eigen3"
+      },
+      {
+        "label": "Eigen3_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Eigen3"
+      },
+      {
+        "label": "CMAKE_CXX_STANDARD",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt"
+      },
+      {
+        "label": "CMAKE_CXX_STANDARD_REQUIRED",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt"
+      },
+      {
+        "label": "COARSE_RTL_SRCS",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt\n\n========================================================================="
+      },
+      {
+        "label": "TRACKING_RTL_SRCS",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt\n\n========================================================================="
+      },
+      {
+        "label": "TRACKING_CPP_HDRS",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /Users/ivanmart/Desktop/ProjectSat/verilog_GNSS/CMakeLists.txt"
+      }
+    ]
+  }
+}
