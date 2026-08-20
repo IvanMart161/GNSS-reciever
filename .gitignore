@@ -36,3 +36,4 @@ Vtracker_channel
 .vscode/
 .idea/
 
+.cache/
