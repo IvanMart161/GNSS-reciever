@@ -37,3 +37,4 @@ Vtracker_channel
 .idea/
 
 .cache/
+bin/*.bin
