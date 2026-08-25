@@ -1,6 +1,5 @@
 # Hardware-Software GNSS Receiver 
 
-```mermaid
 <p align="center">
   <img src="docs/Schem.png" alt="Functional Architecture" width="100%">
 </p>
