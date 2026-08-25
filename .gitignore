@@ -4,7 +4,6 @@
 *.bin
 *.dot
 *.hot
-*.png
 *.svg
 *.csv
 *.hex
