@@ -1,4 +1,4 @@
-GNSS Receiver Pipeline
+# GNSS Receiver Pipeline
 
 This project provides a complete, end-to-end simulation environment for a GPS L1 C/A receiver. It bridges the gap between high-speed software signal generation and hardware-level digital signal processing. Designed for high performance, the pipeline handles everything from raw intermediate frequency (IF) binary generation to telemetry decoding and visual data analysis.
 Key Features
@@ -13,7 +13,7 @@ Key Features
 
     Python Visualization: Automatic rendering of 2D/3D correlation peaks, Doppler spectra, and tracking loop states.
 
-Prerequisites
+# Prerequisites
 
     C++ Compiler: Must support C++17. Apple Clang is natively supported and highly recommended for macOS (M1/M2/M3 Silicon).
 
@@ -25,7 +25,7 @@ Prerequisites
 
     Eigen3: Required for advanced matrix computations within the tracking testbenches.
 
-Build and Run Instructions
+# Build and Run Instructions
 
 The project uses a unified Makefile wrapper over CMake to simplify execution commands.
 
