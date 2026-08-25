@@ -1,34 +1,23 @@
-# GNSS Receiver Pipeline
+# Hardware-Software GNSS Receiver 
 
-This project provides a complete, end-to-end simulation environment for a GPS L1 C/A receiver. It bridges the gap between high-speed software signal generation and hardware-level digital signal processing. Designed for high performance, the pipeline handles everything from raw intermediate frequency (IF) binary generation to telemetry decoding and visual data analysis.
-Key Features
+## About the Project
 
-- C++ Signal Generator: A high-speed baseband generator simulating Doppler shift, acceleration, thermal noise, and full 300-bit navigation subframes.
+This project presents a hardware-software GNSS receiver engineered to operate under the extreme dynamic environments typical of Low Earth Orbit (LEO) spacecraft.
 
-- RTL Coarse Acquisition: A hardware-accurate SystemVerilog module utilizing FFT-based search and CFAR thresholding for rapid satellite detection.
+The core distinguishing feature and primary engineering value of this project lies in the application of an advanced HW/SW co-design methodology. Instead of the classical, bottlenecked approach of isolating CAD logic simulation from abstract mathematical scripting, the entire end-to-end processing pipeline is unified within a single, high-speed ecosystem. High-performance SystemVerilog modules are compiled via Verilator into cycle-accurate C++ models and seamlessly integrated with modular C++ DSP libraries (.hpp). This architecture allows for simulating raw silicon behavior within a closed control loop at incredible speeds.
 
-- RTL Tracking Loop: Closed-loop PLL/DLL channels implemented in SystemVerilog to accurately track code phase and carrier frequency dynamics.
+## Complete Processing Pipeline
 
-- Automated Verification: A robust CMake and Verilator toolchain for rapid compiling, cycle-accurate RTL testing, and pipeline automation.
+The processing chain covers the entire lifecycle of a navigation signal:
 
-- Python Visualization: Automatic rendering of 2D/3D correlation peaks, Doppler spectra, and tracking loop states.
+- High-Dynamics Signal Generation: A custom C++ IF signal generator (9.548 MHz IF, 38.192 MHz Fs) synthesizes navigation BPSK modulation and thermal noise (SNR -25 dB). It injects a radial Doppler acceleration of -50 Hz/s to accurately simulate the geometry of a high-speed satellite pass.
 
-# Prerequisites
+- Hardware-Accelerated Acquisition: The SystemVerilog layer implements a Parallel Code Phase Search (PCPS) based on fast Fourier transforms (FFT/IFFT). To guarantee robust signal detection in high-noise environments, an adaptive CFAR threshold module based on the statistical Neyman-Pearson criterion is integrated.
 
-- C++ Compiler: Must support C++17. Apple Clang is natively supported and highly recommended for macOS (M1/M2/M3 Silicon).
+- Closed-Loop Tracking & EKF: All clock-critical components (Carrier/Code NCOs, Gold PRN generators, Early/Prompt/Late quadrature correlators) operate strictly at the SystemVerilog hardware level. Their control is delegated to a multi-stage C++ controller that smoothly transitions the receiver from a Frequency Lock Loop (FLL) to a Phase Lock Loop (PLL), augmented by an Extended Kalman Filter (EKF) to compensate for massive dynamic frequency and phase drift.
 
-- CMake: Version 3.10 or newer for build automation.
+- Software Demodulator Stack: The software backend performs bit synchronization using a histogram method, automatically resolves BPSK constellation phase ambiguity, acquires the frame preamble, and parses the navigation data word-by-word (TOW, subframe ID, and ephemeris).
 
-- Verilator: Required for compiling SystemVerilog testbenches into executable C++ models.
+## Conclusion
 
-- Python 3: Requires the numpy and matplotlib packages for generating analysis graphs.
-
-- Eigen3: Required for advanced matrix computations within the tracking testbenches.
-
-# Build and Run Instructions
-
-The project uses a unified Makefile wrapper over CMake to simplify execution commands.
-
-- Configure and Generate: Run make gen to compile the C++ signal generator and instantly create the simulated binary test signal.
-
-- Execute Pipeline: Run make run to launch the full Verilator simulation, process the IF signal through acquisition and tracking, and plot the final results.
+The result is a complete, end-to-end digital platform that proves the receiver's viability from the logic gate level up to clean navigation frame extraction under space-grade dynamic stress.
