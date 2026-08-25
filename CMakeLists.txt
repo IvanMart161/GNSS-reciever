@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 project(GNSS_Receiver_Pipeline)
 
 find_package(Verilator REQUIRED)
-
 find_package(Eigen3 REQUIRED)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
@@ -89,7 +88,23 @@ verilate(tracking_sim
 )
 
 # =========================================================================
-# ГИГАЧАД-АВТОМАТИЗАЦИЯ: Полный пайплайн
+# 3. ТАРГЕТ: Генератор GPS Сигнала (C++)
+# =========================================================================
+add_executable(signal_gen sim/generator_GPS_signal.cpp)
+target_include_directories(signal_gen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Включаем оптимизацию -O3 специально для быстрой генерации отсчетов
+target_compile_options(signal_gen PRIVATE -O3)
+
+# Команда для отдельного запуска генератора: cmake --build . --target gen
+add_custom_target(gen
+    COMMAND $<TARGET_FILE:signal_gen>
+    DEPENDS signal_gen
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+    COMMENT ">>> [GEN] Генерация тестового GPS IF сигнала..."
+)
+
+# =========================================================================
+# 4. ГИГАЧАД-АВТОМАТИЗАЦИЯ: Полный пайплайн
 # =========================================================================
 add_custom_target(run
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/sim/run_pipeline.py
