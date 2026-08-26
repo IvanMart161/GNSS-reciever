@@ -6,9 +6,6 @@
 #include <random>
 #include <vector>
 
-// =========================================================================
-// 1. ГЛОБАЛЬНЫЕ КОНСТАНТЫ
-// =========================================================================
 constexpr double fs = 38.192e6;     // Частота дискретизации АЦП (38.192 МГц)
 constexpr double T_sim = 8.0;       // Длительность (8 c)
 constexpr double f_if = 9.548e6;    // Промежуточная частота (9.548 МГц)
@@ -17,11 +14,7 @@ constexpr double f_doppler = 521.0; // Начальная частота Доп�
 constexpr double f_dot = -50.0;     // Ускорение Доплера (Гц/с)
 constexpr double f_chip = 1.023e6;  // Скорость C/A кода (Гц)
 constexpr double SNR_db = -20.0;    // ОСШ (дБ)
-
-// =========================================================================
-// 2. КЛАСС ЦИФРОВОГО ФИЛЬТРА (ПАВ)
-// =========================================================================
-constexpr size_t FILTER_ORDER = 8;
+constexpr size_t FILTER_ORDER = 8;  // Порядок БИХ фильтра
 
 class IIRFilter {
 private:
@@ -39,7 +32,6 @@ public:
   inline double process(double x) {
     double y = b[0] * x + w[0];
 
-    // ИСПРАВЛЕНО: строго до FILTER_ORDER - 1
     for (int i = 0; i < FILTER_ORDER - 1; ++i) {
       w[i] = b[i + 1] * x + w[i + 1] - a[i + 1] * y;
     }
@@ -50,9 +42,6 @@ public:
   }
 };
 
-// =========================================================================
-// 3. ГЕНЕРАТОР C/A КОДА (PRN 1)
-// =========================================================================
 std::array<int, 1023> generate_prn_code() {
   std::array<int, 1023> prn_bpsk;
   std::array<int, 10> G1 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -60,7 +49,7 @@ std::array<int, 1023> generate_prn_code() {
 
   for (int i = 0; i < 1023; ++i) {
     int g1_out = G1[9];
-    int g2_out = G2[1] ^ G2[5]; // XOR для PRN 1 (отводы 2 и 6)
+    int g2_out = G2[1] ^ G2[5];
     int prn_bit = g1_out ^ g2_out;
 
     prn_bpsk[i] = 1 - 2 * prn_bit; // 0 -> +1, 1 -> -1
@@ -78,9 +67,6 @@ std::array<int, 1023> generate_prn_code() {
   return prn_bpsk;
 }
 
-// =========================================================================
-// 4. ГЕНЕРАТОР НАВИГАЦИОННОГО СООБЩЕНИЯ
-// =========================================================================
 std::vector<int> generate_nav_message() {
   std::vector<int> full_bin_msg;
   full_bin_msg.reserve(400);
@@ -123,9 +109,6 @@ std::vector<int> generate_nav_message() {
   return full_bin_msg;
 }
 
-// =========================================================================
-// 5. ГЛАВНАЯ ФУНКЦИЯ
-// =========================================================================
 int main() {
   std::cout << "Начало генерации GPS сигнала (C++)..." << std::endl;
 
@@ -164,11 +147,9 @@ int main() {
   std::cout << "Генерация отсчетов (всего: " << total_samples << ")..."
             << std::endl;
 
-  // 1. Создаем буфер в оперативной памяти сразу на 305 МБ
   std::vector<uint8_t> signal_buffer;
   signal_buffer.reserve(total_samples);
 
-  // 2. Главный цикл (теперь ничего не пишет на диск, только в память)
   for (uint64_t n = 0; n < total_samples; ++n) {
     double t = (double)n / fs;
 
@@ -195,11 +176,9 @@ int main() {
 
     uint8_t adc_1bit = (filtered_signal >= 0.0) ? 1 : 0;
 
-    // Складываем байтики в память
     signal_buffer.push_back(adc_1bit);
   }
 
-  // 3. Мгновенно сбрасываем весь буфер на диск
   std::cout << "Сохранение файла на диск..." << std::endl;
   std::ofstream out_file("gps_if_signal.bin", std::ios::binary);
   if (!out_file) {
