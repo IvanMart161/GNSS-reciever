@@ -11,10 +11,15 @@ constexpr double T_sim = 8.0;       // Длительность (8 c)
 constexpr double f_if = 9.548e6;    // Промежуточная частота (9.548 МГц)
 constexpr double f_L1 = 1575.42e6;  // Частота несущей GPS L1 (Гц)
 constexpr double f_doppler = 521.0; // Начальная частота Доплера (Гц)
-constexpr double f_dot = -50.0;     // Ускорение Доплера (Гц/с)
+constexpr double f_dot = -80;     // Ускорение Доплера (Гц/с)
 constexpr double f_chip = 1.023e6;  // Скорость C/A кода (Гц)
 constexpr double SNR_db = -20.0;    // ОСШ (дБ)
 constexpr size_t FILTER_ORDER = 8;  // Порядок БИХ фильтра
+constexpr double code_shift_chips = 667;
+
+// =========================================================================
+// 2. КЛАСС ЦИФРОВОГО ФИЛЬТРА (ПАВ)
+// =========================================================================
 
 class IIRFilter {
 private:
@@ -154,7 +159,7 @@ int main() {
     double t = (double)n / fs;
 
     double code_phase =
-        t * f_chip + (f_chip / f_L1) * (f_doppler * t + 0.5 * f_dot * t * t);
+        (t * f_chip - code_shift_chips) + (f_chip / f_L1) * (f_doppler * t + 0.5 * f_dot * t * t);
 
     long long abs_chip = static_cast<long long>(std::floor(code_phase));
     int chip_index = abs_chip % 1023;

@@ -49,7 +49,23 @@ int main(int argc, char **argv) {
     coarse_doppler_hz = std::stof(argv[1]);
   }
   if (argc > 2) {
-    int shift = std::stoi(argv[2]) * 10 - 18;
+    // int shift = std::stoi(argv[2]) * 10 - 18;
+    uint32_t coarse_shift_bins = std::stoi(argv[2]);
+    
+    // Компенсируем конвейерную задержку модуля БПФ в Vtop_acqu (~100 тактов)
+    // Эта задержка добавляется аппаратно к индексу пика
+    if (coarse_shift_bins >= 100) {
+        coarse_shift_bins -= 100;
+    } else {
+        coarse_shift_bins = 0; // Защита от underflow
+    }
+
+    // Переводим бины из сетки 4096 (Acquisition) в отсчеты АЦП 38192 (Tracking)
+    code_shift_adc = static_cast<int>(std::round(coarse_shift_bins * (38192.0 / 4096.0)));
+    
+    std::cout << "--- Initialization ---" << std::endl;
+    std::cout << "Compensated FFT bins: " << coarse_shift_bins << std::endl;
+    std::cout << "ADC Start Offset    : " << code_shift_adc << " samples" << std::endl;
   }
 
   std::ifstream in_file("bin/gps_if_signal.bin",
