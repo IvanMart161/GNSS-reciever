@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. ТАРГЕТ: Coarse Acquisition (Поиск)
 # =========================================================================
 set(COARSE_RTL_SRCS
+    rtl_coarse/axi4_lite_acqu.sv
     rtl_coarse/top_acqu.sv
     rtl_coarse/buffer_loop.sv
     rtl_coarse/CIC_loop.sv
@@ -32,7 +33,7 @@ target_include_directories(coarse_sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/includ
 
 verilate(coarse_sim
     SOURCES ${COARSE_RTL_SRCS}
-    TOP_MODULE top_acqu
+    TOP_MODULE axi4_lite_acqu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse/FFT
                  ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse/IFFT
                  ${CMAKE_CURRENT_SOURCE_DIR}/rtl_coarse
@@ -44,7 +45,7 @@ verilate(coarse_sim
                    "-Wno-TIMESCALEMOD"
                    "-Wno-WIDTHTRUNC"
                    "-Wno-WIDTHEXPAND"
-    PREFIX Vtop_acqu
+    PREFIX Vaxi4_lite_acqu
 )
 
 # =========================================================================

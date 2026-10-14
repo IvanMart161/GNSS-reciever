@@ -1,12 +1,126 @@
-#include "Vtop_acqu.h"
+#include "Vaxi4_lite_acqu.h"
 #include "detector_cfar.hpp" // ПОДКЛЮЧАЕМ НАШ НОВЫЙ ДЕТЕКТОР
 #include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <verilated.h>
+
+namespace {
+constexpr uint32_t REG_CTRL = 0x00;
+constexpr uint32_t REG_PHASE_STEP = 0x08;
+constexpr uint32_t REG_DOPPLER_STEP = 0x0C;
+constexpr int AXI_TIMEOUT_CYCLES = 100;
+
+void axi_write(Vaxi4_lite_acqu *top, uint32_t address, uint32_t data) {
+  bool address_sent = false;
+  bool data_sent = false;
+
+  top->s_axi_awaddr = address;
+  top->s_axi_wdata = data;
+  top->s_axi_wstrb = 0xF;
+  top->s_axi_bready = 0;
+
+  for (int cycle = 0;
+       cycle < AXI_TIMEOUT_CYCLES && (!address_sent || !data_sent); ++cycle) {
+    top->s_axi_awvalid = !address_sent;
+    top->s_axi_wvalid = !data_sent;
+    top->aclk = 0;
+    top->eval();
+    bool address_handshake = !address_sent && top->s_axi_awready;
+    bool data_handshake = !data_sent && top->s_axi_wready;
+    top->aclk = 1;
+    top->eval();
+    address_sent = address_sent || address_handshake;
+    data_sent = data_sent || data_handshake;
+  }
+
+  top->s_axi_awvalid = 0;
+  top->s_axi_wvalid = 0;
+  if (!address_sent || !data_sent) {
+    throw std::runtime_error("AXI write request timed out waiting for AW/W");
+  }
+
+  top->s_axi_bready = 1;
+  for (int cycle = 0; cycle < AXI_TIMEOUT_CYCLES; ++cycle) {
+    top->aclk = 0;
+    top->eval();
+    bool response_valid = top->s_axi_bvalid;
+    uint8_t response = top->s_axi_bresp;
+    top->aclk = 1;
+    top->eval();
+    if (response_valid) {
+      top->s_axi_bready = 0;
+      if (response != 0) {
+        throw std::runtime_error("AXI write returned an error response");
+      }
+      return;
+    }
+  }
+  top->s_axi_bready = 0;
+  throw std::runtime_error("AXI write timed out waiting for B");
+}
+
+uint32_t axi_read(Vaxi4_lite_acqu *top, uint32_t address) {
+  top->s_axi_araddr = address;
+  top->s_axi_arvalid = 1;
+  top->s_axi_rready = 0;
+  bool address_sent = false;
+
+  for (int cycle = 0; cycle < AXI_TIMEOUT_CYCLES && !address_sent; ++cycle) {
+    top->aclk = 0;
+    top->eval();
+    bool address_handshake = top->s_axi_arready;
+    top->aclk = 1;
+    top->eval();
+    address_sent = address_handshake;
+  }
+  top->s_axi_arvalid = 0;
+  if (!address_sent) {
+    throw std::runtime_error("AXI read timed out waiting for AR");
+  }
+
+  top->s_axi_rready = 1;
+  for (int cycle = 0; cycle < AXI_TIMEOUT_CYCLES; ++cycle) {
+    top->aclk = 0;
+    top->eval();
+    bool response_valid = top->s_axi_rvalid;
+    uint32_t data = top->s_axi_rdata;
+    uint8_t response = top->s_axi_rresp;
+    top->aclk = 1;
+    top->eval();
+    if (response_valid) {
+      top->s_axi_rready = 0;
+      if (response != 0) {
+        throw std::runtime_error("AXI read returned an error response");
+      }
+      return data;
+    }
+  }
+  top->s_axi_rready = 0;
+  throw std::runtime_error("AXI read timed out waiting for R");
+}
+
+void reset_dut(Vaxi4_lite_acqu *top) {
+  top->aclk = 0;
+  top->aresetn = 1;
+  top->eval();
+  top->aresetn = 0;
+  top->eval();
+  for (int cycle = 0; cycle < 10; ++cycle) {
+    top->aclk = 0;
+    top->eval();
+    top->aclk = 1;
+    top->eval();
+  }
+  top->aclk = 0;
+  top->aresetn = 1;
+  top->eval();
+}
+} // namespace
 
 inline int sign_ext_28(uint32_t v) {
   return (v & 0x08000000) ? (v | 0xF0000000) : v;
@@ -21,7 +135,7 @@ int32_t calc_doppler_step(int hz) {
 
 int main(int argc, char **argv) {
   Verilated::commandArgs(argc, argv);
-  Vtop_acqu *top = new Vtop_acqu;
+  Vaxi4_lite_acqu *top = new Vaxi4_lite_acqu;
 
   std::ifstream in_file("bin/gps_if_signal.bin",
                         std::ios::binary | std::ios::ate);
@@ -70,27 +184,23 @@ int main(int argc, char **argv) {
   uint64_t best_threshold = 0;
 
   for (int doppler_hz : dopplers) {
-    top->clk = 0;
-    top->rst = 1;
-    top->eval();
-    for (int i = 0; i < 10; ++i) {
-      top->clk = !top->clk;
-      top->eval();
+    reset_dut(top);
+    axi_write(top, REG_PHASE_STEP, 0x40000000);
+    if (axi_read(top, REG_PHASE_STEP) != 0x40000000) {
+      throw std::runtime_error("AXI phase-step register readback mismatch");
     }
-    top->rst = 0;
-
-    top->phase_step = 0x40000000;
-    top->doppler_step = calc_doppler_step(doppler_hz);
+    axi_write(top, REG_DOPPLER_STEP,
+              static_cast<uint32_t>(calc_doppler_step(doppler_hz)));
 
     int adc_idx = 0;
     int points_collected = 0;
-    bool first_cycle = true;
-
-    top->start_capture = 1;
+    axi_write(top, REG_CTRL, 1);
 
     while (!Verilated::gotFinish() && points_collected < 4096) {
-
-      top->clk = 1;
+      top->aclk = 0;
+      top->adc_input = (adc_idx < adc_data.size()) ? adc_data[adc_idx++] : 0;
+      top->eval();
+      top->aclk = 1;
       top->eval();
 
       if (doppler_hz == 0) {
@@ -109,14 +219,6 @@ int main(int argc, char **argv) {
         points_collected++;
       }
 
-      top->clk = 0;
-      if (first_cycle) {
-        top->start_capture = 0;
-        first_cycle = false;
-      }
-
-      top->adc_input = (adc_idx < adc_data.size()) ? adc_data[adc_idx++] : 0;
-      top->eval();
     }
 
     std::vector<uint64_t> current_frame(power_2d.end() - 4096, power_2d.end());
