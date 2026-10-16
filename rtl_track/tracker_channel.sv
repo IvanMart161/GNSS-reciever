@@ -7,31 +7,24 @@ module tracker_channel #(
     parameter DATA_WIDTH          = 8,
     parameter ACC_WIDTH           = 24
 )(
-    input  logic                               clk,
-    input  logic                               rst,
-    
-    input  logic                               adc_data_in,
-    
-    input  logic [CARRIER_PHASE_WIDTH-1:0]     carrier_phase_step,
-    input  logic signed [CARRIER_PHASE_WIDTH-1:0] carrier_phase_adjust, // От PLL
-    
-    input  logic [CODE_PHASE_WIDTH-1:0]        code_phase_step,
-    input  logic signed [CODE_PHASE_WIDTH-1:0] code_phase_adjust,    // От DLL
-    
-    input  logic [3:0]                         s1,
-    input  logic [3:0]                         s2,
-    
-    output logic signed [ACC_WIDTH-1:0]        acc_i_e, acc_i_p, acc_i_l,
-    output logic signed [ACC_WIDTH-1:0]        acc_q_e, acc_q_p, acc_q_l,
-    output logic                               dump_valid
+    input  logic                                      clk,
+    input  logic                                      rst,
+    input  logic                                      adc_data_in,
+    input  logic        [CARRIER_PHASE_WIDTH-1:0]     carrier_phase_step,
+    input  logic signed [CARRIER_PHASE_WIDTH-1:0]     carrier_phase_adjust, // От PLL
+    input  logic        [CODE_PHASE_WIDTH-1:0]        code_phase_step,
+    input  logic signed [CODE_PHASE_WIDTH-1:0]        code_phase_adjust,    // От DLL
+    input  logic [3:0]                                s1,
+    input  logic [3:0]                                s2,
+    output logic signed [ACC_WIDTH-1:0]               acc_i_e, acc_i_p, acc_i_l,
+    output logic signed [ACC_WIDTH-1:0]               acc_q_e, acc_q_p, acc_q_l,
+    output logic                                      dump_valid
 );
 
     logic signed [DATA_WIDTH-1:0] nco_cos, nco_sin;
     logic signed [DATA_WIDTH-1:0] baseband_i, baseband_q;
-    
     logic code_ena;
     logic e_code, p_code, l_code;
-    
     logic signed [DATA_WIDTH-1:0] mix_i_e, mix_i_p, mix_i_l;
     logic signed [DATA_WIDTH-1:0] mix_q_e, mix_q_p, mix_q_l;
 
