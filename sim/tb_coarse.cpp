@@ -1,5 +1,5 @@
 #include "Vaxi4_lite_acqu.h"
-#include "detector_cfar.hpp" // ПОДКЛЮЧАЕМ НАШ НОВЫЙ ДЕТЕКТОР
+#include "detector_cfar.hpp" 
 #include <cmath>
 #include <cstdint>
 #include <fstream>
