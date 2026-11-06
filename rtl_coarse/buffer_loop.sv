@@ -1,6 +1,6 @@
 module buffer_loop #(
     parameter int INPUT_DATA = 24,
-    parameter int TARGET_SAMPLES = 3800,
+    parameter int TARGET_SAMPLES = 3819,
     parameter int FFT_SIZE = 4096
 ) (
     input  logic                          clk,
@@ -37,8 +37,8 @@ assign Q_out = ram_Q[read_addr];
 
 typedef enum logic [1:0] { 
     IDLE,                           // Ждем команды на захват 
-    COLLECT,                        // Копим 3800 точек 
-    ZERO_PAD,                       // Добиваем оставшиеся 296 точек нулями 
+    COLLECT,                        // Копим 3819 точек
+    ZERO_PAD,                       // Добиваем оставшиеся 277 точек нулями
     DONE                            // Держим флаг готовности 
 } state_t;
 

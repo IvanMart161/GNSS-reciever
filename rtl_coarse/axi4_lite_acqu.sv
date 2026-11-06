@@ -5,7 +5,7 @@ module axi4_lite_acqu #(
     parameter int ROM_DWIDTH = 8,
     parameter int DEC = 10,
     parameter int ACC_WIDTH = 16,
-    parameter int TARGET_SAMPLES = 3800,
+    parameter int TARGET_SAMPLES = 3819,
     parameter int FFT_SIZE = 4096,
     parameter int ADDR_WIDTH = 32
 ) (

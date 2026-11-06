@@ -14,7 +14,7 @@ module top_acqu #(
     parameter ACC_WIDTH = 16,
 
     // from buffer
-    parameter int TARGET_SAMPLES = 3800,
+    parameter int TARGET_SAMPLES = 3819,
     parameter int FFT_SIZE = 4096
 ) (
     input logic                         clk,
