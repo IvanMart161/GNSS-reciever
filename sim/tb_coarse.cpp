@@ -167,14 +167,14 @@ int main(int argc, char **argv) {
   fft_im.reserve(4096);
   mix_re.reserve(4096);
   mix_im.reserve(4096);
-  power_2d.reserve(21 * 4096);
+  power_2d.reserve(201 * 4096);
 
   std::vector<int> dopplers;
-  for (int d = -5000; d <= 5000; d += 500) {
+  for (int d = -50000; d <= 50000; d += 500) {
     dopplers.push_back(d);
   }
 
-  std::cout << "Starting 2D Doppler Search: -5 kHz to +5 kHz..." << std::endl;
+  std::cout << "Starting 2D Doppler Search: -50 kHz to +50 kHz..." << std::endl;
 
   bool global_signal_found = false;
   int best_doppler = 0;

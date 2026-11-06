@@ -51,10 +51,10 @@ def main():
     power_1d = np.fromfile(pow_path, dtype=np.uint64)
     FRAME_SIZE = 4096
 
-    dopplers = np.arange(-5000, 5001, 500)
+    dopplers = np.arange(-50000, 50001, 500)
     num_doppler = len(dopplers)
 
-    # Формируем 2D матрицу (21 x 4096)
+    # Формируем 2D матрицу (201 x 4096)
     power_2d = power_1d.reshape((num_doppler, FRAME_SIZE)).astype(np.float64)
 
     # --- 2. Читаем спектры ---
